@@ -3,13 +3,147 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-        <title>Frontend Vanilla</title>
+        <title>Terraform Project - Dashboard</title>
         <link rel="stylesheet" href="/src/styles.css" />
     </head>
     <body>
         <main class="container">
-            <h1>🚀 Frontend Vanilla prêt</h1>
-            <p id="status">Chargement…</p>
+            <header class="header">
+                <h1>🚀 Terraform Project Dashboard</h1>
+                <p class="subtitle">Infrastructure AWS 3-Tier (Frontend + API + Database)</p>
+            </header>
+
+            <div class="grid">
+                <!-- Frontend Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="icon">🌐</span>
+                        <h2>Frontend (Nginx)</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="label">Statut:</span>
+                            <span class="badge badge-success" id="frontend-status">✓ Online</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">URL publique:</span>
+                            <span class="value" id="frontend-url">...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Rôle:</span>
+                            <span class="value">Reverse Proxy + Static Files</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="icon">⚡</span>
+                        <h2>API (Node.js)</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="label">Statut:</span>
+                            <span class="badge badge-loading" id="api-status">⏳ Checking...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Endpoint:</span>
+                            <span class="value" id="api-endpoint">/api/</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Health:</span>
+                            <span class="value" id="api-health">...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="icon">🗄️</span>
+                        <h2>Database (PostgreSQL)</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="label">Statut:</span>
+                            <span class="badge badge-loading" id="db-status">⏳ Checking...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Type:</span>
+                            <span class="value">PostgreSQL 16</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Connection:</span>
+                            <span class="value" id="db-connection">Via API (privé)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Display Card -->
+            <div class="card card-full">
+                <div class="card-header">
+                    <span class="icon">📊</span>
+                    <h2>Données de la base</h2>
+                </div>
+                <div class="card-body">
+                    <div id="data-display" class="data-display">
+                        <div class="loading">Chargement des données...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Architecture Info -->
+            <div class="card card-full architecture">
+                <div class="card-header">
+                    <span class="icon">🏗️</span>
+                    <h2>Architecture</h2>
+                </div>
+                <div class="card-body">
+                    <div class="architecture-flow">
+                        <div class="arch-item">
+                            <div class="arch-box">🌐 Frontend</div>
+                            <div class="arch-label">Nginx + Static Files</div>
+                            <div class="arch-sublabel">Port 80 (Public)</div>
+                        </div>
+                        <div class="arch-arrow">→</div>
+                        <div class="arch-item">
+                            <div class="arch-box">⚡ API</div>
+                            <div class="arch-label">Node.js + Express</div>
+                            <div class="arch-sublabel">Port 3000 (VPC Privé)</div>
+                        </div>
+                        <div class="arch-arrow">→</div>
+                        <div class="arch-item">
+                            <div class="arch-box">🗄️ Database</div>
+                            <div class="arch-label">PostgreSQL 16</div>
+                            <div class="arch-sublabel">Port 5432 (VPC Privé)</div>
+                        </div>
+                    </div>
+                    <div class="info-box">
+                        <p>
+                            <strong>🔒 Sécurité :</strong> Seul le Frontend est accessible depuis
+                            Internet. L'API et la Database communiquent uniquement via le VPC privé
+                            AWS (172.31.0.0/16).
+                        </p>
+                        <p>
+                            <strong>🚀 Déploiement :</strong> Infrastructure déployée
+                            automatiquement avec Terraform. Images Docker buildées via GitHub
+                            Actions et stockées sur GHCR.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="footer">
+                <p>
+                    🛠️ Créé avec <strong>Terraform</strong>, <strong>Docker</strong>,
+                    <strong>AWS EC2</strong> | 👤 Marine Langrez |
+                    <a href="https://github.com/woorzz/terraform-project" target="_blank"
+                        >📦 GitHub</a
+                    >
+                </p>
+            </footer>
         </main>
         <script type="module" src="/src/main.js"></script>
     </body>

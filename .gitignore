@@ -27,3 +27,4 @@ terraform/terraform.tfstate
 
 # Node modules
 **/node_modules/
+*.md
