@@ -9,22 +9,26 @@ const app = express();
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.FRONTEND_PORT) || 5173;
 
-app.use((req, res, next) => {
-    res.set("Cache-Control", "no-store");
-    next();
+const FRONTEND_API_BASE_URL = process.env.FRONTEND_API_BASE_URL || "http://localhost:3000";
+
+app.use((_, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+
+app.get("/dev/config.json", (_req, res) => {
+  res.json({ apiBaseUrl: FRONTEND_API_BASE_URL });
 });
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/src", express.static(path.join(__dirname, "src")));
 
-app.get("/dev/health", (_req, res) => res.json({ ok: true, service: "frontend-dev" }));
+app.get("/dev/health", (_req, res) =>
+  res.json({ ok: true, service: "frontend-dev", apiBaseUrl: FRONTEND_API_BASE_URL })
+);
 
-const server = app.listen(PORT, HOST, () => {
-    console.log(
-        `✅ Frontend dev server listening on http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}`,
-    );
-});
-server.on("error", (err) => {
-    console.error("❌ Server failed to start:", err.code || err.message);
-    process.exit(1);
+app.listen(PORT, HOST, () => {
+  console.log(
+    `✅ Frontend dev server listening on http://localhost:${PORT} (API=${FRONTEND_API_BASE_URL})`
+  );
 });

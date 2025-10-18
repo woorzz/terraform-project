@@ -1,4 +1,3 @@
-// ESLint v9 flat config
 const js = require("@eslint/js");
 const globals = require("globals");
 const importPlugin = require("eslint-plugin-import");
@@ -20,7 +19,7 @@ module.exports = [
     },
     rules: {
       ...js.configs.recommended.rules,
-      ...prettier.rules, // désactive les règles en conflit avec Prettier
+      ...prettier.rules, 
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }]
     }
   }
