@@ -11,11 +11,11 @@ jest.unstable_mockModule("../db.js", () => mockedDb);
 const routes = (await import("../routes.js")).default;
 
 const app = express();
-app.use("/", routes);
+app.use("/api", routes);
 
 describe("API basic tests (DB mocked)", () => {
-    it("GET /health returns ok", async () => {
-        const res = await request(app).get("/health");
+    it("GET /api/health returns ok", async () => {
+        const res = await request(app).get("/api/health");
         expect(res.status).toBe(200);
         expect(res.body.ok).toBe(true);
         expect(res.body.service).toBe("api");
