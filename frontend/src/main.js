@@ -1,7 +1,7 @@
 const statusEl = document.getElementById("status");
 
 function now() {
-  return new Date().toLocaleString();
+    return new Date().toLocaleString();
 }
 
 statusEl.textContent = `Module chargé à ${now()}`;
