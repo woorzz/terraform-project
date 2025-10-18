@@ -29,7 +29,7 @@ resource "aws_security_group" "forum_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # API Node.js (port 3000) - Limité au VPC interne
+  # API Node.js (port 3000) 
   ingress {
     description = "API Node.js (internal VPC only)"
     from_port   = 3000
@@ -38,7 +38,6 @@ resource "aws_security_group" "forum_sg" {
     cidr_blocks = ["172.31.0.0/16"]
   }
 
-  # Postgres (limité au CIDR par défaut du VPC)
   ingress {
     description = "Database 5432 (default VPC CIDR)"
     from_port   = 5432

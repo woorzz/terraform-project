@@ -1,6 +1,3 @@
-# ============================================
-# EC2 - Database (PostgreSQL)
-# ============================================
 resource "aws_instance" "database" {
   ami                         = local.effective_ami_id
   instance_type               = var.instance_type
@@ -18,6 +15,18 @@ resource "aws_instance" "database" {
     POSTGRES_PASSWORD="${local.postgres_password}"
 
     mkdir -p /opt/db
+    
+    # Create init SQL script
+    cat >/opt/db/init.sql <<'SQLEOF'
+    CREATE TABLE IF NOT EXISTS example (
+      id SERIAL PRIMARY KEY,
+      message TEXT NOT NULL
+    );
+
+    INSERT INTO example (message) VALUES ('Hello from Postgres')
+    ON CONFLICT DO NOTHING;
+    SQLEOF
+
     cat >/opt/db/.env <<EOC
     POSTGRES_DB=$${POSTGRES_DB}
     POSTGRES_USER=$${POSTGRES_USER}
@@ -36,6 +45,7 @@ resource "aws_instance" "database" {
           POSTGRES_PASSWORD: $${POSTGRES_PASSWORD}
         volumes:
           - db-data:/var/lib/postgresql/data
+          - ./init.sql:/docker-entrypoint-initdb.d/init.sql
         restart: unless-stopped
     volumes:
       db-data:
@@ -51,15 +61,12 @@ resource "aws_instance" "database" {
   user_data_replace_on_change = true
 
   tags = {
-    Name  = "MarineLangrez-Forum-Database"
+    Name  = "MarineLangrez-TerraformProject-Database"
     Type  = "Database"
     Owner = "MarineLangrez"
   }
 }
 
-# ============================================
-# EC2 - API (Node/Express)
-# ============================================
 resource "aws_instance" "api" {
   ami                         = local.effective_ami_id
   instance_type               = var.instance_type
@@ -120,15 +127,12 @@ resource "aws_instance" "api" {
   user_data_replace_on_change = true
 
   tags = {
-    Name  = "MarineLangrez-Forum-API"
+    Name  = "MarineLangrez-TerraformProject-API"
     Type  = "API"
     Owner = "MarineLangrez"
   }
 }
 
-# ============================================
-# EC2 - Frontend (Nginx)
-# ============================================
 resource "aws_instance" "frontend" {
   ami                         = local.effective_ami_id
   instance_type               = var.instance_type
@@ -206,7 +210,7 @@ resource "aws_instance" "frontend" {
   user_data_replace_on_change = true
 
   tags = {
-    Name  = "MarineLangrez-Forum-Frontend"
+    Name  = "MarineLangrez-TerraformProject-Frontend"
     Type  = "Frontend"
     Owner = "MarineLangrez"
   }
