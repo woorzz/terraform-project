@@ -2,7 +2,6 @@ const statusEl = document.getElementById("status");
 
 async function loadExample() {
     try {
-        // Utilise le proxy Nginx configuré pour /api/
         const res = await fetch("/api/v1/example");
         if (!res.ok) throw new Error(`API HTTP ${res.status}`);
         const data = await res.json();

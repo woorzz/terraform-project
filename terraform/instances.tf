@@ -161,7 +161,7 @@ resource "aws_instance" "frontend" {
       }
 
       location /api/ {
-        proxy_pass http://$${API_HOST}:$${API_PORT}/;
+        proxy_pass http://$${API_HOST}:$${API_PORT};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
