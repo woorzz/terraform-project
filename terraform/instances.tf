@@ -28,6 +28,8 @@ resource "aws_instance" "database" {
     services:
       db:
         image: postgres:16-alpine
+        ports:
+          - "5432:5432"
         environment:
           POSTGRES_DB: $${POSTGRES_DB}
           POSTGRES_USER: $${POSTGRES_USER}
@@ -94,6 +96,8 @@ resource "aws_instance" "api" {
     services:
       api:
         image: $${GHCR_IMAGE_API}:$${GHCR_TAG}
+        ports:
+          - "3000:3000"
         environment:
           NODE_ENV: production
           HOST: 0.0.0.0

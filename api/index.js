@@ -15,7 +15,7 @@ app.use(
     }),
 );
 
-app.use("/", routes);
+app.use("/api", routes);
 
 app.listen(PORT, HOST, () => {
     console.log(

@@ -12,7 +12,7 @@ router.get("/health", async (_req, res) => {
     }
 });
 
-router.get("/api/v1/example", async (_req, res) => {
+router.get("/v1/example", async (_req, res) => {
     const result = await query("SELECT id, message FROM example ORDER BY id ASC LIMIT 1");
     res.json(result.rows[0] || { id: null, message: "No data" });
 });
