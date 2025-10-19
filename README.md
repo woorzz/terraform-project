@@ -1,29 +1,67 @@
 # 🚀 Terraform Project - Infrastructure AWS Automatisée
 
-> Application web 3-tier déployée automatiquement sur AWS avec Terraform et CI/CD complète.
+> Application web 3-tier déployée automatiquement sur AWS avec Terraform Cloud, CI/CD complète, et sécurité intégrée.
 
-## 📋 En Bref
+## 📋 Vue d'Ensemble
 
-Projet d'infrastructure as code qui déploie une application web (Frontend Nginx + API Node.js + Database PostgreSQL) sur AWS EC2. Le déploiement est **100% automatique** via GitHub Actions : chaque push déclenche les tests, build les images Docker, et déploie sur AWS.
+Projet d'infrastructure as code qui déploie une application web complète (Frontend + API + Database) sur AWS EC2. Le déploiement est **100% automatique** via GitHub Actions : chaque push déclenche les tests de sécurité, les tests unitaires, le build des images Docker, et le déploiement sur AWS via Terraform Cloud.
 
-## �️ Stack Technique
+## 🛠️ Stack Technique Complète
 
-- **Infrastructure** : Terraform + AWS EC2 + Terraform Cloud
-- **Frontend** : Nginx + JavaScript
-- **Backend** : Node.js + Express + PostgreSQL
-- **CI/CD** : GitHub Actions (3 workflows automatiques)
-- **Containers** : Docker + Docker Compose
+### Infrastructure
+- **IaC** : Terraform 1.9.0 + Terraform Cloud (remote state)
+- **Cloud** : AWS EC2 (3 instances) + VPC + Security Groups
+- **OS** : Ubuntu 22.04 LTS
+
+### Application
+- **Frontend** : Nginx 1.27-alpine + Vanilla JavaScript + CSS
+- **API** : Node.js 20 + Express + PostgreSQL Driver
+- **Database** : PostgreSQL 16-alpine
+
+### CI/CD & Qualité
+- **CI/CD** : GitHub Actions (4 workflows)
+- **Qualité** : ESLint + Prettier
+- **Tests** : Jest (tests unitaires)
+- **Sécurité** : Gitleaks (secret scanning) + Semgrep (SAST)
+- **Containers** : Docker + Docker Compose multi-stage builds
 - **Registry** : GitHub Container Registry (GHCR)
 
-## 🏗️ Architecture
+## 🏗️ Architecture 3-Tier
 
 ```
-Internet → [Frontend Nginx] → [API Node.js] → [Database PostgreSQL]
-            Port 80 Public      Port 3000        Port 5432
-                                VPC Privé        VPC Privé
+┌─────────────────────────────────────────────────────────────┐
+│                         Internet                             │
+└────────────────────────┬────────────────────────────────────┘
+                         │ HTTP (Port 80)
+                         ▼
+              ┌──────────────────────┐
+              │  Frontend (Nginx)     │  ← Public (0.0.0.0/0)
+              │  - Reverse Proxy      │
+              │  - Static Files       │
+              │  - Dashboard UI       │
+              └──────────┬───────────┘
+                         │ VPC Privé (172.31.0.0/16)
+                         ▼
+              ┌──────────────────────┐
+              │   API (Node.js)       │  ← Privé (VPC only)
+              │   - Express           │
+              │   - REST endpoints    │
+              │   - /health, /v1/*    │
+              └──────────┬───────────┘
+                         │ Port 5432 (VPC)
+                         ▼
+              ┌──────────────────────┐
+              │  Database (PostgreSQL)│  ← Privé (VPC only)
+              │  - PostgreSQL 16      │
+              │  - Init scripts       │
+              │  - Persistent volume  │
+              └──────────────────────┘
 ```
 
-**Sécurité** : Seul le frontend est accessible publiquement. L'API et la base de données communiquent via le VPC AWS privé.
+**Sécurité** : 
+- ✅ Seul le frontend est accessible publiquement (Security Group 0.0.0.0/0:80)
+- 🔒 API accessible uniquement depuis le VPC (172.31.0.0/16:3000)
+- 🔒 Database accessible uniquement depuis le VPC (172.31.0.0/16:5432)
 
 ---
 
@@ -50,54 +88,34 @@ git push origin main
 ```
 Push sur main
     ↓
-Tests (npm test)
+1. Security (Gitleaks + Semgrep)
     ↓
-Build Docker Images (tag SHA)
+2. Tests (ESLint + Prettier + Jest)
     ↓
-Push vers GHCR
+3. Build Docker (tag sha-XXXXXXX)
     ↓
-Terraform Cloud (Plan + Apply auto)
+4. Push GHCR
     ↓
-AWS EC2 Déployé ✅
+5. Terraform Cloud (Plan + Apply auto)
+    ↓
+✅ Déployé sur AWS
 ```
 
-### Caractéristiques
+### Fonctionnalités Clés
 
-- ✅ **Versioning automatique** : Images Docker taguées avec SHA du commit
-- ✅ **State centralisé** : Terraform Cloud (pas de state local)
-- ✅ **Auto-apply** : Deploy automatique sans clic manuel
-- ✅ **Traçabilité** : Chaque déploiement lié à un commit Git précis
-- ✅ **Rollback facile** : Redéployer un ancien SHA si besoin
+- ✅ **Auto-apply** : Déploiement automatique sans confirmation manuelle
+- ✅ **State centralisé** : Terraform Cloud (pas de corruption de state local)
+- ✅ **Versioning Docker** : Chaque déploiement lié à un commit Git (tag SHA)
+- ✅ **Rollback facile** : Redéployer un ancien tag en cas de problème
+- ✅ **Sécurité intégrée** : Gitleaks (secrets) + Semgrep (vulnérabilités)
+- ✅ **Tests automatiques** : ESLint + Prettier + Jest bloquent si échec
 
 ---
 
-## 🗂️ Structure
+## 📚 Documentation
 
-```
-.github/workflows/       # CI/CD Pipelines
-  ├── ci.yml            # Tests automatiques
-  ├── cd.yml            # Build & Push Docker
-  └── terraform.yml     # Déploiement AWS
-
-api/                    # Backend Node.js + PostgreSQL
-frontend/               # Frontend Nginx + JavaScript
-terraform/              # Infrastructure as Code
-  ├── main.tf           # Config Terraform Cloud
-  ├── instances.tf      # EC2 Instances
-  ├── security.tf       # Security Groups
-  └── providers.tf      # Backend Terraform Cloud
-```
-
----
-
-## 🎯 Ce Que J'ai Appris
-
-- ✅ **Terraform** : Infrastructure as Code, modules, variables, outputs
-- ✅ **Terraform Cloud** : Remote state, auto-apply, workspace management
-- ✅ **CI/CD** : GitHub Actions, workflows multiples, déclencheurs automatiques
-- ✅ **Docker** : Multi-stage builds, registries, versioning
-- ✅ **AWS** : EC2, Security Groups, VPC, networking
-- ✅ **DevOps** : Automatisation complète du déploiement
+- **[SECURITY.md](./SECURITY.md)** : Sécurité (Gitleaks, Semgrep, Network)
+- **[WORKFLOWS.md](./WORKFLOWS.md)** : Détails des workflows CI/CD
 
 ---
 
