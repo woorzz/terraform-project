@@ -1,4 +1,12 @@
 terraform {
+  cloud {
+    organization = "marinelangrez"
+    
+    workspaces {
+      name = "terraform-project-aws"
+    }
+  }
+  
   required_version = ">= 1.0"
   required_providers {
     aws = {
