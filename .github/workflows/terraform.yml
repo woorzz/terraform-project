@@ -1,0 +1,102 @@
+name: Terraform - Plan & Apply
+
+on:
+  workflow_run:
+    workflows: ["CD - Build & Push to GHCR"]
+    types:
+      - completed
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy (leave empty for auto SHA)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: eu-central-1
+  TF_VERSION: 1.9.0
+
+jobs:
+  terraform:
+    name: Terraform Plan & Apply
+    runs-on: ubuntu-latest
+    # Only run if CD workflow succeeded or manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    defaults:
+      run:
+        working-directory: terraform
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Determine Docker image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ inputs.image_tag }}" ]; then
+            # Manual trigger with specified tag
+            IMAGE_TAG="${{ inputs.image_tag }}"
+            echo "Using manually specified tag: $IMAGE_TAG"
+          else
+            # Auto-detect: use git SHA (short form, 7 chars like Docker metadata-action)
+            IMAGE_TAG="sha-$(git rev-parse --short=7 HEAD)"
+            echo "Using auto-detected SHA tag: $IMAGE_TAG"
+          fi
+          
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "📦 Docker image tag: $IMAGE_TAG"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan \
+            -var="image_tag=${{ steps.tag.outputs.image_tag }}" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="db_password=${{ secrets.TF_DB_PASSWORD }}" \
+            -var="key_pair_name=${{ secrets.TF_KEY_PAIR_NAME }}" \
+            -out=tfplan
+        continue-on-error: false
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_LOG: INFO
+
+      - name: Terraform Output
+        if: success()
+        run: terraform output -json
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🚀 Terraform Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: \`${{ steps.tag.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **AWS Region**: \`${{ env.AWS_REGION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
