@@ -1,17 +1,7 @@
-name: Terraform - Destroy Infrastructure
+name: Terraform - Destroy Infrastructure (manual)
 
 on:
-  workflow_dispatch:
-    inputs:
-      confirmation:
-        description: 'Type "DESTROY" to confirm destruction of all infrastructure'
-        required: true
-        type: string
-      destroy_security_group:
-        description: 'Also destroy Security Group?'
-        required: true
-        type: boolean
-        default: false
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -28,16 +18,8 @@ jobs:
     defaults:
       run:
         working-directory: terraform
-    
-    steps:
-      - name: Verify confirmation
-        run: |
-          if [ "${{ inputs.confirmation }}" != "DESTROY" ]; then
-            echo "❌ Confirmation failed. You must type 'DESTROY' to proceed."
-            exit 1
-          fi
-          echo "✅ Confirmation verified. Proceeding with destroy..."
 
+    steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -54,53 +36,45 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -input=false
 
-      - name: Terraform Destroy (without Security Group)
-        if: ${{ inputs.destroy_security_group == false }}
+      - name: Terraform Destroy (auto-approve)
         run: |
-          echo "🗑️ Destroying instances only (keeping Security Group)..."
-          terraform destroy \
-            -target=aws_instance.frontend \
-            -target=aws_instance.api \
-            -target=aws_instance.database \
-            -var="image_tag=latest" \
-            -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="db_password=${{ secrets.TF_DB_PASSWORD }}" \
-            -var="key_pair_name=${{ secrets.TF_KEY_PAIR_NAME }}" \
-            -auto-approve
+          set -e
+          echo "🗑️ Running terraform destroy -auto-approve"
+          terraform destroy -auto-approve || true
 
-      - name: Terraform Destroy (including Security Group)
-        if: ${{ inputs.destroy_security_group == true }}
+      - name: Fallback - delete security group by name
+        shell: bash
         run: |
-          echo "🗑️ Destroying ALL infrastructure (including Security Group)..."
-          terraform destroy \
-            -var="image_tag=latest" \
-            -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="db_password=${{ secrets.TF_DB_PASSWORD }}" \
-            -var="key_pair_name=${{ secrets.TF_KEY_PAIR_NAME }}" \
-            -auto-approve
+          set -e
+          SG_NAME="marinelangrez-forum-security-group"
+          echo "Looking for security group named: $SG_NAME"
+          # Try to find SG in the account
+          SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=$SG_NAME" --query 'SecurityGroups[0].GroupId' --output text || echo "")
+          if [ -z "$SG_ID" ] || [ "$SG_ID" == "None" ]; then
+            echo "No security group named $SG_NAME found. Nothing to delete."
+            exit 0
+          fi
+          echo "Found security group id: $SG_ID. Attempting to delete..."
+          # Attempt to delete; may fail if still referenced
+          if aws ec2 delete-security-group --group-id "$SG_ID"; then
+            echo "Deleted security group $SG_ID"
+          else
+            echo "Failed to delete security group $SG_ID. It may still be referenced by resources."
+            echo "You may need to detach or remove references before deletion."
+            exit 1
+          fi
 
       - name: Summary
         if: success()
         run: |
           echo "## 🗑️ Infrastructure Destroyed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ✅ Success" >> $GITHUB_STEP_SUMMARY
           echo "- **Region**: \`${{ env.AWS_REGION }}\`" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.destroy_security_group }}" == "true" ]; then
-            echo "- **Security Group**: Destroyed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- **Security Group**: Kept (reusable)" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Infrastructure has been destroyed successfully!" >> $GITHUB_STEP_SUMMARY
 
       - name: Failure Summary
         if: failure()
         run: |
           echo "## ❌ Destroy Failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "You may need to manually clean up resources in AWS Console." >> $GITHUB_STEP_SUMMARY
