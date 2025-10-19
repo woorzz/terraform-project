@@ -1,0 +1,106 @@
+name: Terraform - Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type "DESTROY" to confirm destruction of all infrastructure'
+        required: true
+        type: string
+      destroy_security_group:
+        description: 'Also destroy Security Group?'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: eu-central-1
+  TF_VERSION: 1.9.0
+
+jobs:
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: terraform
+    
+    steps:
+      - name: Verify confirmation
+        run: |
+          if [ "${{ inputs.confirmation }}" != "DESTROY" ]; then
+            echo "❌ Confirmation failed. You must type 'DESTROY' to proceed."
+            exit 1
+          fi
+          echo "✅ Confirmation verified. Proceeding with destroy..."
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Destroy (without Security Group)
+        if: ${{ inputs.destroy_security_group == false }}
+        run: |
+          echo "🗑️ Destroying instances only (keeping Security Group)..."
+          terraform destroy \
+            -target=aws_instance.frontend \
+            -target=aws_instance.api \
+            -target=aws_instance.database \
+            -var="image_tag=latest" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="db_password=${{ secrets.TF_DB_PASSWORD }}" \
+            -var="key_pair_name=${{ secrets.TF_KEY_PAIR_NAME }}" \
+            -auto-approve
+
+      - name: Terraform Destroy (including Security Group)
+        if: ${{ inputs.destroy_security_group == true }}
+        run: |
+          echo "🗑️ Destroying ALL infrastructure (including Security Group)..."
+          terraform destroy \
+            -var="image_tag=latest" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="db_password=${{ secrets.TF_DB_PASSWORD }}" \
+            -var="key_pair_name=${{ secrets.TF_KEY_PAIR_NAME }}" \
+            -auto-approve
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "## 🗑️ Infrastructure Destroyed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Success" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region**: \`${{ env.AWS_REGION }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.destroy_security_group }}" == "true" ]; then
+            echo "- **Security Group**: Destroyed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Security Group**: Kept (reusable)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Infrastructure has been destroyed successfully!" >> $GITHUB_STEP_SUMMARY
+
+      - name: Failure Summary
+        if: failure()
+        run: |
+          echo "## ❌ Destroy Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "You may need to manually clean up resources in AWS Console." >> $GITHUB_STEP_SUMMARY
