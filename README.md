@@ -1,213 +1,107 @@
-# 🚀 Terraform Project - Déploiement Automatique AWS
+# 🚀 Terraform Project - Infrastructure AWS Automatisée
 
-Application web 3-tier (Frontend + API + Database) déployée automatiquement sur AWS via Terraform et GitHub Actions.
+> Application web 3-tier déployée automatiquement sur AWS avec Terraform et CI/CD complète.
 
-## 📦 Stack Technique
+## 📋 En Bref
 
-- **Infrastructure** : Terraform + AWS EC2
-- **Frontend** : Nginx + Vanilla JavaScript
-- **API** : Node.js + Express + PostgreSQL
-- **CI/CD** : GitHub Actions (Tests → Build Docker → Deploy AWS)
-- **Conteneurisation** : Docker + Docker Compose
+Projet d'infrastructure as code qui déploie une application web (Frontend Nginx + API Node.js + Database PostgreSQL) sur AWS EC2. Le déploiement est **100% automatique** via GitHub Actions : chaque push déclenche les tests, build les images Docker, et déploie sur AWS.
+
+## �️ Stack Technique
+
+- **Infrastructure** : Terraform + AWS EC2 + Terraform Cloud
+- **Frontend** : Nginx + JavaScript
+- **Backend** : Node.js + Express + PostgreSQL
+- **CI/CD** : GitHub Actions (3 workflows automatiques)
+- **Containers** : Docker + Docker Compose
+- **Registry** : GitHub Container Registry (GHCR)
 
 ## 🏗️ Architecture
 
 ```
-Internet → Frontend (Nginx) → API (Node.js) → Database (PostgreSQL)
-  HTTP      Port 80             Port 3000       Port 5432
-  Public    Reverse Proxy       VPC Privé       VPC Privé
+Internet → [Frontend Nginx] → [API Node.js] → [Database PostgreSQL]
+            Port 80 Public      Port 3000        Port 5432
+                                VPC Privé        VPC Privé
 ```
 
-**Sécurité** : Seul le frontend est accessible publiquement. API et Database communiquent uniquement via le VPC privé AWS.
+**Sécurité** : Seul le frontend est accessible publiquement. L'API et la base de données communiquent via le VPC AWS privé.
 
 ---
 
-## 🚀 Quick Start
-
-
-### 1. Déploiement automatique
+## ⚡ Déploiement Automatique
 
 ```bash
 git add .
-git commit -m "feat: nouvelle feature"
+git commit -m "feat: nouvelle fonctionnalité"
 git push origin main
 ```
 
-**C'est tout !** GitHub Actions s'occupe de :
-1. ✅ Tester le code (CI)
-2. ✅ Builder les images Docker avec tag SHA (CD)
-3. ✅ Déployer sur AWS (Terraform)
+**C'est tout !** Le pipeline CI/CD s'occupe de tout :
 
-
-### 2. Accéder à l'application
-
-Récupère l'IP dans GitHub Actions → Workflow "Terraform" → Outputs :
-```
-frontend_public_ip = "3.65.38.248"
-```
-
-Ouvre : `http://3.65.38.248` 🎉
+1. **CI** : Tests + Linting
+2. **CD** : Build images Docker (tag: `sha-abc1234`)
+3. **Terraform** : Déploiement automatique sur AWS
 
 ---
 
-## 🔄 Comment ça fonctionne ?
+## 🔄 Pipeline CI/CD
 
-### Workflow CI/CD Automatique
+### Workflow Complet
 
 ```
-Push → CI (Tests) → CD (Build Docker) → Terraform (Deploy AWS)
+Push sur main
+    ↓
+Tests (npm test)
+    ↓
+Build Docker Images (tag SHA)
+    ↓
+Push vers GHCR
+    ↓
+Terraform Cloud (Plan + Apply auto)
+    ↓
+AWS EC2 Déployé ✅
 ```
 
-#### 1. CI - Tests
-- npm ci, lint, test
-- Validation du code
+### Caractéristiques
 
-#### 2. CD - Build Docker
-- Build images API + Frontend
-- Tag automatique : `sha-abc1234` (basé sur commit SHA)
-- Push vers GitHub Container Registry (GHCR)
-
-#### 3. Terraform - Deploy
-- Détecte automatiquement le tag SHA
-- `terraform apply -var="image_tag=sha-abc1234"`
-- Les instances EC2 pull les nouvelles images
-- Redémarrage automatique
-
-**Avantage** : Chaque déploiement est lié à un commit Git précis → Traçabilité complète !
-
+- ✅ **Versioning automatique** : Images Docker taguées avec SHA du commit
+- ✅ **State centralisé** : Terraform Cloud (pas de state local)
+- ✅ **Auto-apply** : Deploy automatique sans clic manuel
+- ✅ **Traçabilité** : Chaque déploiement lié à un commit Git précis
+- ✅ **Rollback facile** : Redéployer un ancien SHA si besoin
 
 ---
 
-## 💻 Développement Local
+## 🗂️ Structure
 
-### Prérequis
-
-- Node.js 20+
-- Docker + Docker Compose
-- Terraform 1.0+
-- AWS CLI configuré
-
-### Lancer l'API en local
-
-```bash
-cd api
-npm install
-npm run dev
 ```
+.github/workflows/       # CI/CD Pipelines
+  ├── ci.yml            # Tests automatiques
+  ├── cd.yml            # Build & Push Docker
+  └── terraform.yml     # Déploiement AWS
 
-### Lancer le Frontend en local
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Tests
-
-```bash
-cd api
-npm test
-npm run lint
+api/                    # Backend Node.js + PostgreSQL
+frontend/               # Frontend Nginx + JavaScript
+terraform/              # Infrastructure as Code
+  ├── main.tf           # Config Terraform Cloud
+  ├── instances.tf      # EC2 Instances
+  ├── security.tf       # Security Groups
+  └── providers.tf      # Backend Terraform Cloud
 ```
 
 ---
 
-## 🗂️ Structure du Projet
+## 🎯 Ce Que J'ai Appris
 
-```
-terraform-project/
-├── .github/workflows/    # CI/CD GitHub Actions
-│   ├── ci.yml           # Tests automatiques
-│   ├── cd.yml           # Build & Push Docker
-│   └── terraform.yml    # Déploiement AWS
-├── api/                 # Backend Node.js
-│   ├── index.js         # Point d'entrée Express
-│   ├── routes.js        # Routes API
-│   ├── db.js            # Connexion PostgreSQL
-│   └── Dockerfile       # Image Docker API
-├── frontend/            # Frontend Nginx
-│   ├── public/          # Fichiers statiques
-│   ├── src/             # JavaScript + CSS
-│   └── Dockerfile       # Image Docker Frontend
-├── terraform/           # Infrastructure as Code
-│   ├── main.tf          # Configuration principale
-│   ├── instances.tf     # Définition des instances EC2
-│   ├── security.tf      # Security Groups
-│   ├── variables.tf     # Variables configurables
-│   └── outputs.tf       # Outputs (IPs, etc.)
-├── README.md            # Ce fichier
-```
+- ✅ **Terraform** : Infrastructure as Code, modules, variables, outputs
+- ✅ **Terraform Cloud** : Remote state, auto-apply, workspace management
+- ✅ **CI/CD** : GitHub Actions, workflows multiples, déclencheurs automatiques
+- ✅ **Docker** : Multi-stage builds, registries, versioning
+- ✅ **AWS** : EC2, Security Groups, VPC, networking
+- ✅ **DevOps** : Automatisation complète du déploiement
 
 ---
-
-## 🔒 Sécurité
-
-### Architecture en couches
-
-- ✅ **Frontend** : Accessible depuis Internet (port 80)
-- 🔒 **API** : Accessible uniquement depuis le VPC (172.31.0.0/16)
-- 🔒 **Database** : Accessible uniquement depuis le VPC (172.31.0.0/16)
-
-### Bonnes pratiques
-
-- ✅ Secrets chiffrés dans GitHub
-- ✅ Credentials AWS via IAM (pas de root)
-- ✅ Fichiers sensibles exclus (.gitignore)
-- ✅ Communication interne via IP privées
-
----
-
-## 🛠️ Commandes Utiles
-
-### Déployer manuellement
-
-```bash
-cd terraform
-terraform init
-terraform plan
-terraform apply
-```
-
-### Déployer une version spécifique (Rollback)
-
-```bash
-terraform apply -var="image_tag=sha-abc1234"
-```
-
-### SSH dans les instances
-
-```bash
-ssh -i ~/.ssh/marinelangrez-forum-keypair.pem ubuntu@<instance_ip>
-```
-
-### Voir les logs
-
-```bash
-ssh ubuntu@<instance_ip>
-cd /opt/frontend  # ou /opt/api ou /opt/db
-sudo docker compose logs -f
-```
-
-### Détruire l'infrastructure
-
-```bash
-cd terraform
-terraform destroy
-```
-
-## 🎯 Fonctionnalités Clés
-
-- ✅ **Déploiement 100% automatique** via GitHub Actions
-- ✅ **Versioning des images Docker** avec SHA du commit
-- ✅ **Infrastructure as Code** avec Terraform
-- ✅ **Rollback facile** en redéployant un ancien tag
-- ✅ **Sécurité par défaut** (VPC privé pour API/DB)
-- ✅ **Tests automatiques** avant chaque déploiement
-- ✅ **Traçabilité complète** Git → Docker → AWS
 
 ## 👤 Auteur
 
-**Marine Langrez**
-- GitHub: [@woorzz](https://github.com/woorzz)
-- Projet: [terraform-project](https://github.com/woorzz/terraform-project)
+**Marine Langrez**  
+GitHub: [@woorzz](https://github.com/woorzz)
